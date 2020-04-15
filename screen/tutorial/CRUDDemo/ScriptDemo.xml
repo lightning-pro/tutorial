@@ -1,0 +1,181 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="Script" menu-image="pin" menu-image-type="icon" default-menu-index="2">
+
+    <transition name="createTest">
+        <service-call name="tutorial.TutorialServices.create#TestEntity" in-map="context"/>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="createTest1">
+        <actions>
+            <script>import org.moqui.context.ExecutionContext
+            import org.moqui.entity.EntityValue
+
+            ec.logger.info("子线程调用当前服务的线程名称为${Thread.currentThread().getName()}")
+            ExecutionContext ec = context.ec
+            EntityValue entityValue = ec.entity.makeValue("moqui.test.TestEntity")
+            entityValue.setAll(ec.context)
+            entityValue.setSequencedIdPrimary()
+            entityValue.create()
+            </script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="editTutorial">
+        <default-response url="../Template"/>
+    </transition>
+
+    <widgets>
+        <container-row>
+            <row-col lg="12">
+                <label text="控制器调用服务演示"/>
+                <form-single name="CreateFormServiceGroovy" transition="createTest">
+                    <field name="testMedium">
+                        <default-field title="字符">
+                            <text-line placeholder="text-medium长度为VARCHAR(255)"/>
+                        </default-field>
+                    </field>
+                    <field name="testLong">
+                        <default-field title="文本字段">
+                            <text-area placeholder="text-long长度为VARCHAR(4095)"/>
+                        </default-field>
+                    </field>
+                    <field name="testIndicator">
+                        <default-field title="标记字段">
+                            <radio no-current-selected-key="Y">
+                                <option key="Y" text="是"/>
+                                <option key="N" text="否"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="testDate">
+                        <default-field title="日期">
+                            <date-time type="date"/>
+                        </default-field>
+                    </field>
+                    <field name="testDateTime">
+                        <default-field title="日期-时间">
+                            <date-time type="date-time"/>
+                        </default-field>
+                    </field>
+                    <field name="testTime">
+                        <default-field title="日期-时间">
+                            <date-time type="time"/>
+                        </default-field>
+                    </field>
+                    <field name="testNumberInteger">
+                        <default-field title="整型">
+                            <text-line validate="numeric" validate-msg="排序必须为数字!"/>
+                        </default-field>
+                    </field>
+                    <field name="testNumberDecimal">
+                        <default-field title="Decimal">
+                            <text-line />
+                        </default-field>
+                    </field>
+                    <field name="testNumberFloat">
+                        <default-field title="Float">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="testCurrencyAmount">
+                        <default-field title="金额" placeholder="金额">
+                            <text-line validate="required" validate-msg="金额必填" />
+                        </default-field>
+                    </field>
+                    <field name="testCurrencyPrecise">
+                        <default-field title="确切金额" tooltip="用于财务计算">
+                            <text-line format="Number"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="新建">
+                            <submit/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-ref name="testIndicator"/>
+                        <field-accordion>
+                            <field-group title="数字">
+                                <field-row>
+                                    <field-ref name="testNumberInteger"/><field-ref name="testNumberDecimal"/><field-ref name="testNumberFloat"/>
+                                </field-row>
+                            </field-group>
+                            <field-group title="日期时间">
+                                <field-row>
+                                    <field-ref name="testDate"/><field-ref name="testDateTime"/><field-ref name="testTime"/>
+                                </field-row>
+                            </field-group>
+                        </field-accordion>
+                        <field-row>
+                            <field-ref name="testCurrencyAmount"/><field-ref name="testCurrencyPrecise"/>
+                        </field-row>
+
+                        <fields-not-referenced/>
+
+                    </field-layout>
+                </form-single>
+            </row-col>
+            <row-col lg="12">
+                <label text="控制器处理"/>
+                <container-box>
+                    <box-header title="主键整型演示">
+                        <container-dialog id="AddDialog1" button-text="添加">
+                            <form-single name="CreateFormActionGroovy" transition="createTest1">
+                                <field name="testMedium">
+                                    <default-field title="文本">
+                                        <text-line/>
+                                    </default-field>
+                                </field>
+                                <field name="submitButton">
+                                    <default-field title="新建">
+                                        <submit/>
+                                    </default-field>
+                                </field>
+                            </form-single>
+                        </container-dialog>
+                    </box-header>
+                    <box-body>
+                        <form-list name="ListTestIntPk1" list="testIntPkList" use-widget="aggrid">
+                            <entity-find entity-name="TestIntPk" list="testIntPkList"/>
+                            <row-actions>
+                                <!--redirectPage字段不是TestIntPk里的字段，需要行处理加进去-->
+                                <set field="redirectPage" value="ScriptDemo"/>
+                            </row-actions>
+                            <field name="intId">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="redirectPage">
+                                <default-field>
+                                    <hidden/>
+                                </default-field>
+                            </field>
+                            <field name="testMedium">
+                                <default-field title="文本">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="lastUpdatedStamp">
+                                <default-field title="最新修改时间">
+                                    <display/>
+                                </default-field>
+                            </field>
+                            <field name="operationFields" is-action-column="true">
+                                <default-field title="操作">
+                                    <link url="editTutorial" link-parameters="{'intId':'intId','redirectPage':'redirectPage'}" text="编辑" btn-type="info" target-dialog="dynamicDialog"/>
+                                </default-field>
+                            </field>
+                        </form-list>
+                    </box-body>
+                </container-box>
+
+            </row-col>
+        </container-row>
+        <grid-dynamic-dialog id="dynamicDialog" title="弹框编辑"/>
+    </widgets>
+
+</screen>

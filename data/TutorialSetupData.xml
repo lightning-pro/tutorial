@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-facade-xml type="seed-initial">
+    <moqui.security.ArtifactGroup artifactGroupId="TUT_APP"
+                                  description="Tutorial App (通过根入口挂载)"/>
+    <moqui.security.ArtifactGroupMember artifactGroupId="TUT_APP"
+                                        artifactName="component://tutorial/screen/tutorial.xml"
+                                        artifactTypeEnumId="AT_XML_SCREEN" inheritAuthz="Y"/>
+    <moqui.security.ArtifactAuthz artifactAuthzId="TUT_ALL"
+                                  userGroupId="ALL_USERS" artifactGroupId="TUT_APP"
+                                  authzTypeEnumId="AUTHZT_ALWAYS" authzActionEnumId="AUTHZA_ALL"/>
+</entity-facade-xml>

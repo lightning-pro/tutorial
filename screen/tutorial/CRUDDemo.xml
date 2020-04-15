@@ -1,0 +1,14 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="CRUD演示" menu-image="pin" menu-image-type="icon" default-menu-index="1">
+
+    <subscreens default-item="XmlDemo"/>
+
+    <widgets>
+        <label type="h2" text="CRUD演示"/>
+
+        <subscreens-panel id="crud_panel" type="tab"/>
+
+    </widgets>
+
+</screen>

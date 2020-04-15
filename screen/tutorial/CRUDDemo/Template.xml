@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-include="false">
+
+    <parameter name="intId"/>
+    <parameter name="redirectPage" required="true"/>
+
+    <transition name="saveTestIntPk">
+        <service-call name="store#moqui.test.TestIntPk" in-map="context"/>
+        <conditional-response url="../XmlDemo">
+            <condition>
+                <compare field="redirectPage" value="XmlDemo"/>
+            </condition>
+        </conditional-response>
+        <conditional-response url="../ScriptDemo">
+            <condition>
+                <compare field="redirectPage" value="ScriptDemo"/>
+            </condition>
+        </conditional-response>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+        <entity-find-one entity-name="moqui.test.TestIntPk" value-field="fieldValues"/>
+    </actions>
+
+    <widgets>
+        <label text="动态被加载的页面" type="strong"/>
+        <form-single name="CreateTestIntPk" transition="saveTestIntPk">
+            <field name="redirectPage">
+                <default-field title="用于transition跳转条件判断">
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="intId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="testMedium">
+                <default-field title="主键是整型">
+                    <text-line/>
+                </default-field>
+            </field>
+            <field name="submitButton">
+                <default-field title="提交">
+                    <submit/>
+                </default-field>
+            </field>
+            <field-layout>
+                <fields-not-referenced/>
+                <field-row><field-ref name="testMedium"/><field-ref name="submitButton"/></field-row>
+            </field-layout>
+        </form-single>
+
+    </widgets>
+</screen>

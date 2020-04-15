@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-index="99" default-menu-title="从入门到精通">
+
+    <subscreens default-item="CRUDDemo"/>
+
+    <widgets>
+        <label type="h1" text="从入门到不放弃使用指南"/>
+<!--        <render-mode>-->
+<!--            <text type="html,vuet,covt" location="component://tutorial/template/hello.html"/>-->
+<!--        </render-mode>-->
+        <subscreens-active/>
+    </widgets>
+</screen>

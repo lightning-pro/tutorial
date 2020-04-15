@@ -1,0 +1,534 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.1.xsd">
+
+    <!-- Tutorial Services -->
+    <service verb="create" noun="TestEntity" displayName="新建一条记录">
+        <in-parameters>
+            <auto-parameters include="nonpk"/>
+            <parameter name="testLong" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <auto-parameters include="pk" required="true"/>
+        </out-parameters>
+        <actions>
+            <script>import org.moqui.context.ExecutionContext
+            import org.moqui.entity.EntityValue
+
+            ec.logger.info("子线程调用当前服务的线程名称为${Thread.currentThread().getName()}")
+            ExecutionContext ec = context.ec
+            EntityValue entityValue = ec.entity.makeValue("moqui.test.TestEntity")
+            entityValue.setAll(ec.context)
+            entityValue.setSequencedIdPrimary()
+            entityValue.create()
+            //返回主键加入到上下文变量中
+            ec.context.put("testId",entityValue.testId)
+            </script>
+        </actions>
+    </service>
+
+    <service verb="update" noun="Learn" displayName="Update an Learn" type="entity-auto" allow-remote="true">
+        <in-parameters>
+            <auto-parameters include="pk" required="true"/>
+            <auto-parameters include="nonpk"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="oldStatusId" type="String" required="true"/>
+        </out-parameters>
+    </service>
+
+    <service verb="delete" noun="Learn" displayName="Delete an Learn">
+        <in-parameters><auto-parameters include="pk" required="true"/></in-parameters>
+        <actions>
+            <entity-find-one entity-name="moqui.learn.Learn" value-field="learn"/>
+            <if condition="learn == null"><return message="Learn ${learnId} not found"/></if>
+            <entity-delete value-field="learn"/>
+        </actions>
+    </service>
+
+    <service verb="update" noun="TestOrder" displayName="Update an Test Order">
+        <in-parameters>
+            <auto-parameters entity-name="mantle.order.TestOrder" include="pk" required="true"/>
+            <auto-parameters entity-name="mantle.order.TestOrder" include="nonpk"/>
+            <parameter name="unitAmount" type="BigDecimal"/>
+        </in-parameters>
+        <actions>
+            <service-call name="update#mantle.order.TestOrder" in-map="context"/>
+        </actions>
+    </service>
+
+    <service verb="echo" noun="Message">
+        <in-parameters>
+            <parameter name="message"/>
+        </in-parameters>
+        <actions>
+            <script>
+                System.out.println("服务被执行")
+            </script>
+        </actions>
+    </service>
+    <service verb="test" noun="JsonRpcCall" type="remote-json-rpc" location="http://10.0.8.77:8081/rpc/json" method="org.moqui.impl.BasicServices.find#Enumeration">
+        <in-parameters>
+            <parameter name="authUsername" default-value="account-rpc"/>
+            <parameter name="authPassword" default-value="moquirpc"/>
+            <parameter name="enumTypeId"/>
+        </in-parameters>
+    </service>
+
+    <service verb="test" noun="JsonRpcCallRecommend" type="remote-json-rpc" location="moqui-77-T1" method="org.moqui.impl.BasicServices.find#Enumeration">
+        <in-parameters>
+            <parameter name="authUsername" default-value="account-rpc"/>
+            <parameter name="authPassword" default-value="moquirpc"/>
+            <parameter name="enumTypeId"/>
+        </in-parameters>
+    </service>
+
+    <service verb="test" noun="SendEmail">
+        <actions>
+            <set field="resetPassword" value="你的新密码"/>
+            <!-- send an email with the new password -->
+            <service-call name="org.moqui.impl.EmailServices.send#EmailTemplate" async="true">
+                <field-map field-name="emailTemplateId" value="PASSWORD_RESET"/>
+                <field-map field-name="toAddresses" value="weizhenzhao@mfexcel.com"/>
+                <field-map field-name="bccAddresses" value="zhangzhenyu@mfexcel.com"/>
+                <field-map field-name="bodyParameters" from="[userAccount:ec.user.userAccount, resetPassword:resetPassword]"/>
+            </service-call>
+        </actions>
+    </service>
+
+    <service verb="test" noun="UpdateOldSystemTableBySql" transaction="force-new">
+        <in-parameters>
+            <parameter name="id" type="Integer"/>
+            <parameter name="pubName"/>
+        </in-parameters>
+        <actions>
+            <entity-find entity-name="mantle.mfexcel.old.TbPublicReceiveNumRelease" list="numList">
+                <econdition field-name="id" from="id"/>
+            </entity-find>
+            <if condition="numList">
+                <set field="numObj" from="numList[0]"/>
+
+                <!--我就再模拟到家，多读一次-->
+                <entity-find entity-name="mantle.mfexcel.old.TbPublicReceiveNumRelease" list="xxxList">
+                    <econdition field-name="id" from="id"/>
+                </entity-find>
+
+
+                <set field="sqlString" value="UPDATE tb_public_receive_num_release SET pub_name = '${pubName}' WHERE id=${id}"/>
+                <sql-execute sql="${sqlString}" group-name="publicnumDb" count-field="updateRow"/>
+                <log message="sqlString=${sqlString}"/>
+                <log message="${updateRow}条记录已被更新"/>
+            </if>
+        </actions>
+    </service>
+    <service verb="upload" noun="CloudFiles">
+        <in-parameters>
+            <parameter name="contentRoot" required="true"/>
+            <parameter name="path" required="true"/>
+            <parameter name="forUploadStream" required="true" type="Object"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="path"/>
+        </out-parameters>
+        <actions>
+            <script>
+                import org.moqui.resource.ResourceReference
+                import org.moqui.context.ExecutionContext
+
+                ExecutionContext ec = context.ec
+                String contentLocation = contentRoot + path
+                ResourceReference docRr = ec.resource.getLocationReference(contentLocation)
+                docRr.putStream(forUploadStream)
+                //演示返回值
+                ec.context.path = path
+            </script>
+        </actions>
+    </service>
+
+    <service verb="uploadAndPreload" noun="CloudFiles">
+        <in-parameters>
+            <parameter name="contentRoot" required="true"/>
+            <parameter name="path" required="true"/>
+            <parameter name="forUploadStream" required="true" type="Object"/>
+        </in-parameters>
+        <actions>
+            <script>
+                import org.moqui.resource.ResourceReference
+                import org.moqui.context.ExecutionContext
+                import org.moqui.cdn.CdnClient
+
+                ExecutionContext ec = context.ec
+                String contentLocation = contentRoot + path
+                ResourceReference docRr = ec.resource.getLocationReference(contentLocation)
+                docRr.putStream(forUploadStream)
+
+                //如果cdn都用同一个厂家，可以把CdnClient放服务外面，把对象传进来；
+                //如果每个像根据客户，渠道等每个url的cdn厂商都不一样，可以根据业务在这里按照子域名来获取;实例对象都是在内存中，好快的
+                String subDomain = "down111"
+                CdnClient cdnClient = ec.getTool('CdnClient', org.moqui.cdn.CdnClientToolFactory.class, subDomain)
+                String cdnUrl = cdnClient.getSubDomainUrl(subDomain, path)
+
+                //上传完成，可以预热，一起做
+                //如果不想一起做，可以在页面另外加一个按钮，再写个提交处理，从业务表里拿出来，批处理接口来预热
+                cdnClient.preloadCaches(cdnUrl)
+
+                //一起记录业务数据库
+                ec.service.sync().name("create#moqui.learn.ContentDemo").parameters([contentLocation: contentLocation, contentCdnHttpUrl: cdnUrl]).call()
+            </script>
+        </actions>
+    </service>
+
+    <service verb="import" noun="PublicNumData" transaction="ignore" transaction-timeout="600">
+        <description>已废弃，留着当参考</description>
+        <actions>
+            <script><![CDATA[
+                import javax.sql.XAConnection
+                import java.sql.Connection
+                import java.sql.ResultSet
+                import java.sql.Statement
+
+                confMap = new HashMap<>()
+                confMap.put("entity_ds_db_conf", "mysql")
+                confMap.put("entity_ds_host", "10.0.200.34")
+                confMap.put("entity_ds_port", "3306")
+                confMap.put("entity_ds_database", "publicnum_test")
+                confMap.put("entity_ds_user", "dev")
+                confMap.put("entity_ds_password", "123456")
+
+                XAConnection xacon = null
+                Connection con = null
+                Statement stmt = null
+                ResultSet rs = null
+
+                long count = 0
+
+                try{
+                    xacon = ec.entityFacade.getConfConnection(confMap)
+                    con = xacon.getConnection()
+                    stmt = con.createStatement()
+                    rs = stmt.executeQuery("select count(id) from tb_public_main_release")
+                    if (rs.next())
+                        count = rs.getLong(1)
+                }finally{
+                    if (stmt != null) stmt.close()
+                    if (rs != null) rs.close()
+                    if (con != null) con.close()
+                    if (xacon != null) xacon.close()
+                }
+                ec.logger.log("info","总共要处理${count}条数据",null)
+                //每次处理一万条
+                int processEachTime = 10000
+                int processMaxIndex = ((count - 1) as BigDecimal).divide(processEachTime as BigDecimal, 0, BigDecimal.ROUND_DOWN) as int
+
+                for(int processIndex = 0; processIndex <= processMaxIndex;processIndex++){
+                    ec.logger.log("info","执行第${processIndex +1}次ETL",null)
+                    selectSql = "select * from tb_public_main_release limit " + processEachTime + " offset " + processIndex * processEachTime
+                    ec.service.sync().name("moqui.learn.LearnServices.import#CustomerData").parameters([selectSql:selectSql,confMap:confMap]).call()
+                }
+
+
+                ]]></script>
+        </actions>
+    </service>
+
+    <service verb="import" noun="CustomerData" transaction="ignore" transaction-timeout="600">
+        <description>已废弃，当代码参考使用</description>
+        <in-parameters>
+            <parameter name="selectSql" required="true"/>
+            <parameter name="confMap" required="true" type="Map"/>
+        </in-parameters>
+        <actions>
+            <script><![CDATA[
+                import org.moqui.impl.util.JdbcExtractor
+                import org.moqui.etl.SimpleEtl
+                import java.sql.Timestamp
+
+                JdbcExtractor extractor = new JdbcExtractor(ec)
+                extractor.setDbInfo(confMap.entity_ds_db_conf, confMap.entity_ds_host, confMap.entity_ds_port, confMap.entity_ds_database, confMap.entity_ds_user, confMap.entity_ds_password)
+
+                extractor.setSqlInfo("CustomerData", selectSql)
+
+                SimpleEtl simpleEtl = new SimpleEtl(extractor, ec.entityFacade.makeEtlLoader())
+
+                CustomerDataTransformer cdt = new CustomerDataTransformer()
+                simpleEtl.addTransformer("CustomerData", cdt)
+
+                simpleEtl.process()
+
+                ec.logger.log("info", "提取数据量 ${simpleEtl.extractCount}; 跳过数据量 ${simpleEtl.skipCount}; 加载新数据 ${simpleEtl.loadCount} ;处理时间 ${simpleEtl.getRunTime()}ms",null)
+
+                class CustomerDataTransformer implements SimpleEtl.Transformer {
+                    private currentTime = new Timestamp(System.currentTimeMillis())
+
+                    @Override
+                    void transform(SimpleEtl.EntryTransform entryTransform) throws Exception {
+                        Map<String, Object> val = entryTransform.entry.etlValues
+                        //存Party表
+                        Map<String, Object> partyObj = [:]
+                        partyObj.partyId = 'cust_'+val.id
+                        partyObj.pseudoId = val.id
+                        partyObj.partyTypeEnumId = "PtyOrganization"
+                        partyObj.customerStatusId = "CstActived"
+                        partyObj.comments = val.introduce
+                        entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.Party", partyObj))
+                        //存Organization表
+                        Map<String, Object> organizationObj = [:]
+                        organizationObj.partyId = 'cust_'+val.id
+                        organizationObj.organizationName = val.pub_name
+                        organizationObj.officeSiteName = val.address
+                        organizationObj.createdStamp = Timestamp.valueOf(val.add_time)
+                        entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.Organization", organizationObj))
+                        //PartyRole表
+                        entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.PartyRole", [partyId: 'cust_'+val.id, roleTypeId: 'Customer']))
+                        //相关联系信息表
+                        if (val.website) {
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.ContactMech", [contactMechId: 'wa_' + val.id, contactMechTypeEnumId: 'CmtWebAddress', infoString: val.website]))
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.PartyContactMech", [partyId: 'cust_'+val.id, contactMechId: 'wa_' + val.id, contactMechPurposeId: 'WebUrlPrimary', fromDate: currentTime]))
+                        }
+                        if (val.faxnum) {
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.ContactMech", [contactMechId: 'fax_' + val.id, contactMechTypeEnumId: 'CmtTelecomNumber']))
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.contact.TelecomNumber", [contactMechId: 'fax_' + val.id, contactNumber: val.faxnum, askForName: val.short_name]))
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.PartyContactMech", [partyId: 'cust_'+val.id, contactMechId: 'fax_' + val.id, contactMechPurposeId: 'PhoneFax', fromDate: currentTime]))
+                        }
+                        if (val.email) {
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.ContactMech", [contactMechId: 'email_' + val.id, contactMechTypeEnumId: 'CmtEmailAddress', infoString: val.email]))
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.party.PartyContactMech", [partyId: 'cust_'+val.id, contactMechId: 'email_' + val.id, contactMechPurposeId: 'EmailPrimary', fromDate: currentTime]))
+                        }
+                        //公众号表【源系统公众号客户信息一个表】
+                        Map<String, Object> pubObj = [:]
+                        pubObj.publicViewId = 'pub_'+val.id
+                        pubObj.pseudoId = val.id
+                        pubObj.customerPartyId = 'cust_'+val.id
+                        pubObj.publicViewName = val.short_name
+                        if(val.tradeMenu == 1){
+                            pubObj.getIndustryMenuFlag = 'Y'
+                        }
+                        if(val.tradeMenu == 0){
+                            pubObj.getIndustryMenuFlag = 'N'
+                        }
+                        if(val.group_id == null || val.group_id =='' || val.group_id == "0" ){
+                            pubObj.getLogoFlag = 'N'
+                        }else{
+                            pubObj.getLogoFlag = 'Y'
+                        }
+
+                        pubObj.statusId = 'CstPending'
+                        pubObj.fromDate = currentTime
+                        entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.mfexcel.cdm.CustomerPublicViewInfo", pubObj))
+
+                    }
+                }
+                ]]></script>
+        </actions>
+    </service>
+
+    <service verb="import" noun="TbStatNumberMapDetailData" transaction="ignore">
+        <description>仅做代码参考用</description>
+        <actions>
+            <script><![CDATA[
+                import javax.sql.XAConnection
+                import java.sql.Connection
+                import java.sql.ResultSet
+                import java.sql.Statement
+
+                confMap = new HashMap<>()
+                confMap.put("entity_ds_db_conf", "mysql")
+                confMap.put("entity_ds_host", "10.0.200.34")
+                confMap.put("entity_ds_port", "3306")
+                confMap.put("entity_ds_database", "xy_mixin_db")
+                confMap.put("entity_ds_user", "dev")
+                confMap.put("entity_ds_password", "123456")
+
+                XAConnection xacon = null
+                Connection con = null
+                Statement stmt = null
+                ResultSet rs = null
+
+                long count = 0
+
+                try{
+                    xacon = ec.entityFacade.getConfConnection(confMap)
+                    con = xacon.getConnection()
+                    stmt = con.createStatement()
+                    rs = stmt.executeQuery("select count(id) from tb_stat_number_map_detail")
+                    if (rs.next())
+                        count = rs.getLong(1)
+                }finally{
+                    if (stmt != null) stmt.close()
+                    if (rs != null) rs.close()
+                    if (con != null) con.close()
+                    if (xacon != null) xacon.close()
+                }
+                ec.logger.log("info","总共要处理${count}条数据",null)
+                //每次处理一万条
+                int processEachTime = 20000
+                int processMaxIndex = ((count - 1) as BigDecimal).divide(processEachTime as BigDecimal, 0, BigDecimal.ROUND_DOWN) as int
+
+                for(int processIndex = 0; processIndex <= processMaxIndex;processIndex++){
+                    ec.logger.log("info","执行第${processIndex +1}次ETL",null)
+                    selectSql = "select * from tb_stat_number_map_detail limit " + processEachTime + " offset " + processIndex * processEachTime
+                    ec.service.sync().name("moqui.learn.LearnServices.etl#PubSignData").parameters([selectSql:selectSql,confMap:confMap]).call()
+                }
+                ]]></script>
+        </actions>
+    </service>
+
+    <service verb="etl" noun="PubSignData" transaction-timeout="6000">
+        <description>不要调用，留着当学习代码参考用</description>
+        <in-parameters>
+            <parameter name="selectSql" required="true"/>
+            <parameter name="confMap" required="true" type="Map"/>
+        </in-parameters>
+        <actions>
+            <script><![CDATA[
+                import org.moqui.impl.entity.*
+                import org.moqui.impl.util.JdbcExtractor
+                import org.moqui.etl.SimpleEtl
+                import java.sql.Timestamp
+
+                JdbcExtractor extractor = new JdbcExtractor(ec)
+                extractor.setDbInfo(confMap.entity_ds_db_conf, confMap.entity_ds_host, confMap.entity_ds_port, confMap.entity_ds_database, confMap.entity_ds_user, confMap.entity_ds_password)
+                extractor.setSqlInfo("PubSignData", selectSql)
+
+                SimpleEtl.Loader loader = ec.entityFacade.makeEtlLoader()
+                loader.useTryInsert()
+
+                SimpleEtl simpleEtl = new SimpleEtl(extractor, loader)
+                simpleEtl.addTransformer("PubSignData",new PubSignTransformer())
+                simpleEtl.process()
+
+                ec.logger.log("info", "提取数据量 ${simpleEtl.extractCount}; 跳过数据量 ${simpleEtl.skipCount}; 加载新数据 ${simpleEtl.loadCount} ;处理时间 ${simpleEtl.getRunTime()}ms", null)
+
+                class PubSignTransformer implements SimpleEtl.Transformer {
+                    @Override
+                    void transform(SimpleEtl.EntryTransform entryTransform) throws Exception {
+
+                        Map<String, Object> val = entryTransform.entry.etlValues
+
+                        if(val.statu == 1 && val.pub_info_id!=null && val.pub_info_id > 0){
+                            Map<String, Object> publicViewSignObj = [:]
+                            publicViewSignObj.pubSignId = val.id
+                            publicViewSignObj.signSha256 = val.sign_sha
+                            publicViewSignObj.signText = val.sign_mw
+                            publicViewSignObj.publicViewId = "pub_" + val.pub_info_id
+                            publicViewSignObj.publicViewName = val.nick_name
+                            String version_code = val.version_code
+                            if(version_code){
+                                String versionStr = version_code.substring(0,4)+"-"+version_code.substring(4,6)+"-"+version_code.substring(6,8)+" "+version_code.substring(8,10)+":"+version_code.substring(10,12)+":"+version_code.substring(12)
+                                if(versionStr){
+                                    publicViewSignObj.fromDate = Timestamp.valueOf(versionStr)
+                                }
+                            }
+
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.mfexcel.cdm.PublicViewSign", publicViewSignObj))
+
+                            //同样放条记录到上报表
+                            Map<String, Object> signMissReportObj = [:]
+                            signMissReportObj.missId = val.id
+                            signMissReportObj.signSha = val.sign_sha
+                            signMissReportObj.signText = val.sign_mw
+                            if(val.recommand_pub_info_id > 0){
+                                signMissReportObj.recommendPublicViewId = "pub_"+val.recommand_pub_info_id
+                            }
+
+                            if(val.recommand_statu == 1){
+                                signMissReportObj.recommendStatusId ="SignWhite"
+                            }
+                            if(val.recommand_statu == -1){
+                                signMissReportObj.recommendStatusId ="SignBlack"
+                            }
+                            if(val.recommand_statu == -2){
+                                signMissReportObj.recommendStatusId ="SignGray"
+                            }
+                            if(val.recommand_statu == 0){
+                                signMissReportObj.recommendStatusId ="SignUndefine"
+                            }
+                            signMissReportObj.assignToUserId = val.get_task_user
+                            if(val.first_statu == 1){
+                                signMissReportObj.firstCheckFlag = 'W'
+                            }
+                            if(val.first_statu == -1){
+                                signMissReportObj.firstCheckFlag = 'B'
+                            }
+                            if(val.first_statu == 0){
+                                signMissReportObj.firstCheckFlag = 'P'
+                            }
+                            if(val.first_statu == -2){
+                                signMissReportObj.firstCheckFlag = 'G'
+                            }
+
+                            signMissReportObj.auditCheckUserId = val.check_user
+
+                            if(val.check_statu == 1){
+                                signMissReportObj.auditCheckFlag = 'P'
+                            }
+                            if(val.check_statu == 2){
+                                signMissReportObj.auditCheckFlag = 'Y'
+                            }
+                            if(val.check_statu == -1){
+                                signMissReportObj.auditCheckFlag = 'N'
+                            }
+                            if(val.check_statu == -2){
+                                signMissReportObj.auditCheckFlag = 'R'
+                            }
+                            signMissReportObj.finalStatusId = 'SignWhite'
+                            signMissReportObj.transferIndicator = 'Y'
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.mfexcel.cdm.SignMissReport", signMissReportObj))
+                        }else{
+                            Map<String, Object> signMissReportObj = [:]
+                            signMissReportObj.missId = val.id
+                            signMissReportObj.signSha = val.sign_sha
+                            signMissReportObj.signText = val.sign_mw
+                            if(val.recommand_pub_info_id > 0){
+                                signMissReportObj.recommendPublicViewId = "pub_"+val.recommand_pub_info_id
+                            }
+                            if(val.recommand_statu == 1){
+                                signMissReportObj.recommendStatusId ="SignWhite"
+                            }
+                            if(val.recommand_statu == -1){
+                                signMissReportObj.recommendStatusId ="SignBlack"
+                            }
+                            if(val.recommand_statu == -2){
+                                signMissReportObj.recommendStatusId ="SignGray"
+                            }
+                            if(val.recommand_statu == 0){
+                                signMissReportObj.recommendStatusId ="SignUndefine"
+                            }
+                            signMissReportObj.assignToUserId = val.get_task_user
+                            if(val.first_statu == 1){
+                                signMissReportObj.firstCheckFlag = 'W'
+                            }
+                            if(val.first_statu == -1){
+                                signMissReportObj.firstCheckFlag = 'B'
+                            }
+                            if(val.first_statu == 0){
+                                signMissReportObj.firstCheckFlag = 'P'
+                            }
+                            if(val.first_statu == -2){
+                                signMissReportObj.firstCheckFlag = 'G'
+                            }
+
+                            signMissReportObj.auditCheckUserId = val.check_user
+
+                            if(val.check_statu == 1){
+                                signMissReportObj.auditCheckFlag = 'P'
+                            }
+                            if(val.check_statu == 2){
+                                signMissReportObj.auditCheckFlag = 'Y'
+                            }
+                            if(val.check_statu == -1){
+                                signMissReportObj.auditCheckFlag = 'N'
+                            }
+                            if(val.check_statu == -2){
+                                signMissReportObj.auditCheckFlag = 'R'
+                            }
+
+                            entryTransform.addEntry(new SimpleEtl.SimpleEntry("mantle.mfexcel.cdm.SignMissReport", signMissReportObj))
+                        }
+
+                    }
+                }
+                ]]></script>
+        </actions>
+    </service>
+
+</services>

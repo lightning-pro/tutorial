@@ -1,0 +1,334 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="XMl" menu-image="pin" menu-image-type="icon" default-menu-index="1">
+
+    <transition name="createTest">
+        <service-call name="create#moqui.test.TestEntity" in-map="context"/>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="createTest2">
+        <actions>
+            <log message="myField=====${myField}"/>
+            <!--创建entity对象-->
+            <entity-make-value entity-name="moqui.test.TestEntity" value-field="testEntity"/>
+            <!--使用上下文中的字段给对象赋值，非主键字段-->
+            <entity-set value-field="testEntity" map="context" include="nonpk"/>
+            <!--使用框架生成主键值-->
+            <entity-sequenced-id-primary value-field="testEntity"/>
+            <!--插入数据-->
+            <entity-create value-field="testEntity"/>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="triggerDialog">
+        <actions>
+            <log message="do what you want to do here testField==${testField}"/>
+            <set field="anotherCondition" value="yourCheckValue"/>
+        </actions>
+        <conditional-response url="." parameter-map="[_openDialog:'TestDialog']">
+            <condition>
+                <compare field="conditionFromForm" value="Y"/>
+                <compare field="anotherCondition" value="yourCheckValue"/>
+            </condition>
+        </conditional-response>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="anotherHandler">
+        <actions>
+            <log message="另外用一个处理器处理二次提交内容"/>
+            <log message="testText1==${testText1}"/>
+            <log message="extraParams1==${extraParams1}"/>
+            <log message="extraParams2==${extraParams2}"/>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="testDoubleConfirmSubmit">
+        <actions>
+            <log message="confirm===${confirm}"/>
+            <!--你需要二次确认的业务逻辑；记得加上!confirm；-->
+            <if condition="testText1 == 'wahaha' &amp;&amp;!confirm">
+                <script>
+                    ec.web.sendJsonResponse([type:"confirm"])
+                    return
+                </script>
+                <!--自定义弹框显示和处理器地址和额外参数-->
+                <else-if condition="testText1 == '自定义'">
+                    <script>
+                        ec.web.sendJsonResponse([type:"confirm",title:"弹框抬头",content:"弹框内容",submitUrl:"/apps/tutorial/CRUDDemo/XmlDemo/anotherHandler",withParams:'{"extraParams1":"额外的参数","extraParams2":"额外的参数2"}'])
+                        return
+                    </script>
+                </else-if>
+                <else>
+                    <log message="继续处理的你逻辑"/>
+                </else>
+            </if>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="displayOtherPage">
+        <default-response url="../Template">
+            <parameter name="redirectPage" value="XmlDemo"/>
+        </default-response>
+    </transition>
+
+    <transition name="testEntity">
+        <default-response url="../TestEntity"/>
+    </transition>
+
+    <widgets>
+        <container-dialog id="CreateDialog1" button-text="手写字段">
+            <form-single name="CreateDemoFormCustom" transition="createTest">
+                <field name="testMedium">
+                    <default-field title="字符">
+                        <text-line placeholder="text-medium长度为VARCHAR(255)"/>
+                    </default-field>
+                </field>
+                <field name="testLong">
+                    <default-field title="文本字段">
+                        <text-area placeholder="text-long长度为VARCHAR(4095)"/>
+                    </default-field>
+                </field>
+                <field name="testIndicator">
+                    <default-field title="标记字段">
+                        <radio no-current-selected-key="Y">
+                            <option key="Y" text="是"/>
+                            <option key="N" text="否"/>
+                        </radio>
+                    </default-field>
+                </field>
+                <field name="testDate">
+                    <default-field title="日期">
+                        <date-time type="date"/>
+                    </default-field>
+                </field>
+                <field name="testDateTime">
+                    <default-field title="日期-时间">
+                        <date-time type="date-time"/>
+                    </default-field>
+                </field>
+                <field name="testTime">
+                    <default-field title="日期-时间">
+                        <date-time type="time"/>
+                    </default-field>
+                </field>
+                <field name="testNumberInteger">
+                    <default-field title="整型">
+                        <text-line validate="numeric" validate-msg="排序必须为数字!"/>
+                    </default-field>
+                </field>
+                <field name="testNumberDecimal">
+                    <default-field title="Decimal">
+                        <text-line />
+                    </default-field>
+                </field>
+                <field name="testNumberFloat">
+                    <default-field title="Float">
+                        <text-line/>
+                    </default-field>
+                </field>
+                <field name="testCurrencyAmount">
+                    <default-field title="金额" placeholder="金额">
+                        <text-line validate="required" validate-msg="金额必填" />
+                    </default-field>
+                </field>
+                <field name="testCurrencyPrecise">
+                    <default-field title="确切金额" tooltip="用于财务计算">
+                        <text-line format="Number"/>
+                    </default-field>
+                </field>
+                <field name="submitButton">
+                    <default-field title="新建">
+                        <submit/>
+                    </default-field>
+                </field>
+                <field-layout>
+                    <field-ref name="testIndicator"/>
+                    <field-accordion>
+                        <field-group title="数字">
+                            <field-row>
+                                <field-ref name="testNumberInteger"/><field-ref name="testNumberDecimal"/><field-ref name="testNumberFloat"/>
+                            </field-row>
+                        </field-group>
+                        <field-group title="日期时间">
+                            <field-row>
+                                <field-ref name="testDate"/><field-ref name="testDateTime"/><field-ref name="testTime"/>
+                            </field-row>
+                        </field-group>
+                    </field-accordion>
+                    <field-row>
+                        <field-ref name="testCurrencyAmount"/><field-ref name="testCurrencyPrecise"/>
+                    </field-row>
+
+                    <fields-not-referenced/>
+
+                </field-layout>
+            </form-single>
+        </container-dialog>
+
+        <container-dialog id="CreateDialog2" button-text="实体自动生成字段" type="success">
+            <form-single name="CreateDemoFormAuto" transition="createTest">
+                <auto-fields-entity entity-name="moqui.test.TestEntity" field-type="edit" include="nonpk"/>
+                <field name="submitButton">
+                    <default-field title="新建">
+                        <submit/>
+                    </default-field>
+                </field>
+            </form-single>
+        </container-dialog>
+
+        <container-dialog id="CreateDialog3" button-text="表单继承" type="danger">
+            <form-single name="SubmitForm" extends="CreateDemoFormCustom" transition="createTest2">
+                <field name="myField">
+                    <default-field title="我自己的字段">
+                        <text-line/>
+                    </default-field>
+                </field>
+                <field name="submitButton">
+                    <default-field>
+                        <ignored/>
+                    </default-field>
+                </field>
+                <field name="CreateButton">
+                    <default-field title="我的新建">
+                        <submit/>
+                    </default-field>
+                </field>
+            </form-single>
+        </container-dialog>
+
+        <container-dialog id="TestDialog" button-text="这个弹框没有按钮" show-button="false">
+            <label text="此弹框默认不显示按钮，根据其它条件显示"/>
+        </container-dialog>
+
+        <dynamic-dialog id="dynamicDialog1" button-text="弹框加载其它页面" transition="displayOtherPage" type="warning"/>
+
+        <link url="testEntity" text="跳转新建" btn-type="info"/>
+
+        <form-list name="ListTestEntity" list="testEntityList" use-widget="aggrid">
+            <entity-find entity-name="moqui.test.TestEntity" list="testEntityList">
+            </entity-find>
+            <field name="testId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="testMedium">
+                <default-field title="字符">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testLong">
+                <default-field title="文本字段">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testIndicator">
+                <default-field title="标记字段">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testDate">
+                <default-field title="日期">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testDateTime">
+                <default-field title="日期-时间">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testTime">
+                <default-field title="日期-时间">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberInteger">
+                <default-field title="整型">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberDecimal">
+                <default-field title="Decimal">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberFloat">
+                <default-field title="Float">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testCurrencyAmount">
+                <default-field title="金额" placeholder="金额">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testCurrencyPrecise">
+                <default-field title="确切金额" tooltip="用于财务计算">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationFields" is-action-column="true">
+                <default-field title="操作">
+                    <link url="testEntity" link-parameters="{'testId':'testId'}" text="编辑" btn-type="info"/>
+                </default-field>
+            </field>
+        </form-list>
+
+        <container-row>
+            <row-col lg="12">
+                <label text="表单提交后，满足某些条件触发弹框" type="h2"/>
+                <form-single name="TestDialogForm" transition="triggerDialog">
+                    <field name="conditionFromForm">
+                        <default-field title="条件字段">
+                            <radio>
+                                <option key="Y" text="打开框架的弹框"/>
+                                <option key="N" text="不打开"/>
+                            </radio>
+                        </default-field>
+                    </field>
+                    <field name="testField">
+                        <default-field title="其它字段">
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="提交">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </row-col>
+            <row-col lg="12">
+                <label text="表单提交后根据某些条件二次确认弹框提交" type="h2"/>
+                <label text="transition使用confirm字段来判断是否二次提交" type="h3"/>
+                <label text="或者使用自定义transition来处理二次提交" type="h3"/>
+                <form-single name="TestDoubleConfirm" transition="testDoubleConfirmSubmit">
+                    <field name="testText1">
+                        <default-field>
+                            <text-line placeholder="输入wahaha或者自定义试试"/>
+                        </default-field>
+                    </field>
+                    <field name="testText2">
+                        <default-field>
+                            <text-line/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="提交">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </row-col>
+        </container-row>
+
+        <dynamic-container id="dynamicContainer1" transition="displayOtherPage"/>
+
+    </widgets>
+
+</screen>
