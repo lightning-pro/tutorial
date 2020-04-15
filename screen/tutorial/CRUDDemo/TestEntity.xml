@@ -3,10 +3,20 @@
     default-menu-include="false">
 
     <parameter name="testId"/>
+    <parameter name="redirectPage"/>
 
     <transition name="save">
         <service-call name="store#moqui.test.TestEntity" in-map="context"/>
+        <conditional-response url="../FormListDemo">
+            <condition>
+                <compare field="redirectPage" value="FormListDemo"/>
+            </condition>
+        </conditional-response>
         <default-response url="../XmlDemo"/>
+    </transition>
+
+    <transition name="goBack">
+        <default-response url="../${redirectPage}"/>
     </transition>
 
     <actions>
@@ -16,6 +26,11 @@
     <widgets>
 
         <form-single name="SaveForm1" transition="save" map="testEntity">
+            <field name="redirectPage">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
             <field name="testId">
                 <default-field>
                     <hidden/>
@@ -60,6 +75,18 @@
             <field name="submitButton">
                 <default-field title="Save">
                     <submit/></default-field></field>
+            <field name="cancelButton">
+                <default-field title=" ">
+                    <link url="goBack" text="取消" btn-type="warning"/>
+                </default-field>
+            </field>
+            <field-layout>
+                <fields-not-referenced/>
+                <field-row>
+                    <field-ref name="submitButton"/><field-ref name="cancelButton"/>
+                </field-row>
+            </field-layout>
+
         </form-single>
 
     </widgets>

@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+    default-menu-title="表格演示" default-menu-index="3">
+
+    <transition name="editTestEntity">
+        <default-response url="../TestEntity"/>
+    </transition>
+    <transition name="bulkSubmit">
+        <actions>
+            <iterate list="_requestBodyJsonList" entry="lineObj">
+                <log message="提交的行数据==${lineObj}"/>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="bulkSetIndicator">
+        <actions>
+            <script>
+                import com.fasterxml.jackson.databind.SerializationFeature
+                import com.fasterxml.jackson.databind.JsonNode
+                import org.moqui.impl.context.ContextJavaUtil
+
+                JsonNode jsonNode = ContextJavaUtil.jacksonMapper.readTree(TestEntityFormList)
+                List selectedItemList = ContextJavaUtil.jacksonMapper.treeToValue(jsonNode, List.class)
+            </script>
+            <iterate list="selectedItemList" entry="selectedItem">
+                <service-call name="update#moqui.test.TestEntity" in-map="[testId:selectedItem.testId,testIndicator:testIndicator]"/>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="deleteTestEntity">
+        <service-call name="delete#moqui.test.TestEntity" in-map="[testId:testId]"/>
+        <default-response url="."/>
+    </transition>
+
+    <actions>
+    </actions>
+
+    <widgets>
+        <link url="bulkSubmit" htmlStyle="display:inline-block" btn-type="info" text="批量提交表格选中行" target-list="TestEntityFormList" confirmation="确认提交？"/>
+
+        <container-dialog id="SetupIndicatorDialog" button-text="批量处理标记字段">
+            <form-single name="SetupIndicatorForm" transition="bulkSetIndicator" submit-with-list="TestEntityFormList" reload-dialog="SetupIndicatorDialog">
+                <field name="testIndicator">
+                    <default-field title="标记">
+                        <radio no-current-selected-key="Y">
+                            <option key="Y" text="是"/>
+                            <option key="N" text="否"/>
+                        </radio>
+                    </default-field>
+                </field>
+                <field name="submitButton">
+                    <default-field title="提交">
+                        <submit/>
+                    </default-field>
+                </field>
+            </form-single>
+        </container-dialog>
+
+        <form-list name="TestEntityFormList" list="testEntityList" use-widget="aggrid" multi="true" auto-stretch="true" select-columns="true" >
+            <entity-find entity-name="moqui.test.TestEntity" list="testEntityList">
+                <search-form-inputs/>
+            </entity-find>
+            <row-actions>
+                <set field="testIndicatorText" value=""/>
+                <if condition="testIndicator == 'Y'">
+                    <set field="testIndicatorText" value="是"/>
+                </if>
+                <if condition="testIndicator == 'N'">
+                    <set field="testIndicatorText" value="否"/>
+                </if>
+                <set field="redirectPage" value="FormListDemo"/>
+            </row-actions>
+            <field name="redirectPage">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="testId" show-checkbox="true">
+                <default-field title="ID">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testMedium">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="字符">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testLong">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="文本字段">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testIndicator">
+                <header-field>
+                    <drop-down allow-empty="true">
+                        <option key="Y" text="是"/>
+                        <option key="N" text="否"/>
+                    </drop-down>
+                </header-field>
+                <default-field title="标记字段">
+                    <display text="${testIndicatorText}"/>
+                </default-field>
+            </field>
+            <field name="testDate">
+                <header-field>
+                    <date-find type="date"/>
+                </header-field>
+                <default-field title="日期">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testDateTime">
+                <header-field>
+                    <date-find type="date-time"/>
+                </header-field>
+                <default-field title="日期-时间">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testTime">
+                <header-field>
+                    <date-find type="time"/>
+                </header-field>
+                <default-field title="日期-时间">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberInteger">
+                <header-field>
+                    <range-find/>
+                </header-field>
+                <default-field title="整型">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberDecimal">
+                <header-field>
+                    <range-find/>
+                </header-field>
+                <default-field title="Decimal">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testNumberFloat">
+                <header-field>
+                    <range-find/>
+                </header-field>
+                <default-field title="Float">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testCurrencyAmount">
+                <header-field>
+                    <range-find/>
+                </header-field>
+                <default-field title="金额" placeholder="金额">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="testCurrencyPrecise">
+                <header-field>
+                    <range-find/>
+                </header-field>
+                <default-field title="确切金额" tooltip="用于财务计算">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="operationFields" is-action-column="true" width="280">
+                <default-field title="操作">
+                    <link url="editTestEntity" link-parameters="{'testId':'testId','redirectPage':'redirectPage'}" text="跳转编辑" btn-type="info"/>
+                    <link url="editTestEntity" link-parameters="{'testId':'testId','redirectPage':'redirectPage'}" text="弹框编辑" btn-type="warning" target-dialog="dynamicDialog"/>
+                    <link url="editTestEntity" link-parameters="{'testId':'testId','redirectPage':'redirectPage'}" text="抽屉编辑" btn-type="success" target-dialog="dynamicDrawer"/>
+                    <link url="deleteTestEntity" link-parameters="{'testId':'testId'}" text="删除" btn-type="danger" confirmation="确认删除？"/>
+                </default-field>
+            </field>
+        </form-list>
+        <grid-dynamic-dialog id="dynamicDialog" title="编辑框"/>
+        <grid-dynamic-dialog id="dynamicDrawer" title="编辑抽屉" show-type="drawer" placement="left"/>
+    </widgets>
+</screen>
