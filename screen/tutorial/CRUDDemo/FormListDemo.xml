@@ -36,8 +36,51 @@
         <default-response url="."/>
     </transition>
 
-    <actions>
-    </actions>
+    <transition name="getEnumerationList" read-only="true">
+        <actions>
+            <entity-find entity-name="moqui.basic.Enumeration" list="enumList">
+                <search-form-inputs paginate="true"/>
+            </entity-find>
+            <!--分页处理;想知道有什么变量，参考framework/template/XmlActions.groovy.ftl下entity-find代码模板，已经做了分页的逻辑处理-->
+            <!--如果不用entity-find语义，也请参考模板下的逻辑，或者参考代码ScreenForm.groovy 第1720行开始的逻辑，和模板的逻辑是一样的 -->
+            <!--塞给返回http头的代码可以参考ScreenDefinition.groovy第903行开始的代码。或者WebFacadeImpl.groovy第923行开始的代码 -->
+            <script>
+                ec.web.response.addIntHeader('X-Total-Count', enumListCount as int)
+                ec.web.response.addIntHeader('X-Page-Index', enumListPageIndex as int)
+                ec.web.response.addIntHeader('X-Page-Size', enumListPageSize as int)
+                ec.web.response.addIntHeader('X-Page-Max-Index', enumListPageMaxIndex as int)
+                ec.web.response.addIntHeader('X-Page-Range-Low', enumListPageRangeLow as int)
+                ec.web.response.addIntHeader('X-Page-Range-High', enumListPageRangeHigh as int)
+            </script>
+
+            <script>ec.web.sendJsonResponse(enumList)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="downloadData" read-only="true">
+        <actions>
+            <!--表格里右键 导出Excel->导出数据出发-->
+            <!--手动生成下载文件；这里只演示被调用；具体生成文件由开发处理-->
+            <entity-find entity-name="moqui.basic.Enumeration" list="enumList">
+                <search-form-inputs paginate="false"/>
+            </entity-find>
+            <script>
+                ec.web.sendJsonResponse(enumList)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+    <transition name="customDownload" read-only="true">
+        <actions>
+            <entity-find entity-name="moqui.basic.Enumeration" list="enumList">
+                <search-form-inputs paginate="false"/>
+            </entity-find>
+            <script>
+                ec.web.sendJsonResponse(enumList)
+            </script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
 
     <widgets>
         <link url="bulkSubmit" htmlStyle="display:inline-block" btn-type="info" text="批量提交表格选中行" target-list="TestEntityFormList" confirmation="确认提交？"/>
@@ -186,5 +229,27 @@
         </form-list>
         <grid-dynamic-dialog id="dynamicDialog" title="编辑框"/>
         <grid-dynamic-dialog id="dynamicDrawer" title="编辑抽屉" show-type="drawer" placement="left"/>
+
+
+        <link url="customDownload" htmlStyle="display:inline-block" btn-type="success" text="自定义下载" target-list="ListEnumeration"/>
+        <form-list name="ListEnumeration" use-widget="aggrid" data-transition="getEnumerationList" export-file-transition="downloadData" multi="true">
+
+            <field name="enumId" show-checkbox="true">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field title="ID">
+                    <display/>
+                </default-field>
+            </field>
+            <field name="description">
+                <header-field>
+                    <text-find/>
+                </header-field>
+                <default-field><display/></default-field>
+            </field>
+        </form-list>
+
+        
     </widgets>
 </screen>

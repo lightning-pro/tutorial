@@ -1,0 +1,191 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="文件存储" default-menu-index="4">
+
+    <transition name="downloadTheFile" read-only="true">
+        <actions>
+            <entity-find-one entity-name="moqui.test.Foo" value-field="foo">
+                <field-map field-name="fooId" from="fooId"/>
+            </entity-find-one>
+            <script>ec.web.sendResourceResponse(foo?.fooText)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <transition name="downloadDirectly" read-only="true">
+        <actions>
+            <script>ec.web.sendResourceResponse(fooText)</script>
+        </actions>
+        <default-response type="none"/>
+    </transition>
+
+    <transition name="uploadFile">
+        <actions>
+            <if condition="uploadContent != null &amp;&amp; uploadContent.size &gt; 0">
+                <set field="filename" from="uploadContent.getName()"/>
+                <!--            <set field="contentRoot" value="runtime://uploadFiles"/>-->
+                <set field="path" value="tutorial/${filename}"/>
+                <set field="contentLocation" value="${contentRoot}/${path}"/>
+                <script>
+                    import org.moqui.context.ExecutionContext
+                    import org.moqui.resource.ResourceReference
+
+                    ExecutionContext ec = context.ec
+                    ResourceReference reference = ec.resource.getLocationReference(contentLocation)
+                    //存放到路径指定的地方
+                    InputStream fileInputStream = uploadContent.getInputStream()
+                    try{
+                        reference.putStream(fileInputStream)
+                    }finally{
+                        fileInputStream.close()
+                    }
+                </script>
+
+                <!--把文件路径保存到演示数据库表中-->
+                <service-call name="create#moqui.test.Foo" in-map="[fooText:contentLocation]"/>
+            </if>
+        </actions>
+        <default-response url="."/>
+    </transition>
+    <transition name="uploadMultipleFile">
+        <actions>
+            <iterate list="_fileUploadList" entry="fileItem">
+                <!--没具体的业务主从表，先用演示表创建个主键记录用于演示路径根据ID来设置-->
+                <service-call name="create#moqui.test.Foo" out-map="context"/>
+
+                <set field="filename" from="fileItem.getName()"/>
+                <set field="path" value="tutorial/${fooId}/${filename}"/>
+                <set field="contentLocation" value="${contentRoot}/${path}"/>
+                <set field="docRr" from="ec.resource.getLocationReference(contentLocation)"/>
+                <script>
+                    InputStream fileStream = fileItem.getInputStream()
+                    //二进制文件用putStream方法保存文件到对应到数据库，硬盘文件,或者云对象存储服务器上
+                    try { docRr.putStream(fileStream) } finally { fileStream.close() }
+                </script>
+                <service-call name="update#moqui.test.Foo" in-map="[fooId:fooId,fooText:contentLocation]"/>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <transition name="deleteFile">
+        <actions>
+            <entity-find-one entity-name="moqui.test.Foo" value-field="foo">
+                <field-map field-name="fooId" from="fooId"/>
+            </entity-find-one>
+            <script>
+                import org.moqui.context.ExecutionContext
+                import org.moqui.resource.ResourceReference
+
+                ExecutionContext ec = context.ec
+                ResourceReference reference = ec.resource.getLocationReference(foo?.fooText)
+                //删除文件
+                reference.delete()
+                //删除记录
+                foo.delete()
+            </script>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <widgets>
+        <label type="h3" text="文件上传代码高度通用，仅通过前缀schema，就可以通用的上传到各种各种的存储地址"/>
+        <label type="p" text="runtime://存储到runtime目录里"/>
+        <label type="p" text="component://存储到模块目录里"/>
+        <label type="p" text="file:存储到服务器磁盘路径"/>
+        <label type="p" text="dbresource://存储到数据库里(会模拟路径)"/>
+        <label type="p" text="oss://存储到阿里云对象存储里；需要单独安装‘插件’"/>
+        <label type="p" text="ks3://存储到金山云对象存储里;需要单独安装‘插件’"/>
+
+        <container-row>
+            <row-col lg="12">
+                <form-single name="UploadFileDemo1"  transition="uploadFile">
+                    <field name="contentRoot">
+                        <default-field title="存放地址">
+                            <drop-down>
+                                <option key="runtime://uploadFiles" text="runtime://存放在工程runtime目录下"/>
+                                <option key="component://tutorial/uploadFiles" text="component://tutorial/存放在工程模块下"/>
+                                <option key="file:/home/tutorial/uploadFiles" text="file:存放在服务器上的指定路径下"/>
+                                <option key="dbresource://uploadFiles" text="dbresource://存放在数据库DbResource,DbResourceFile表里"/>
+                                <option key="oss://uploadFiles" text="oss://存放在阿里oss上，后面的是bucket；需要安装moqui-oss模块"/>
+                                <option key="ks3://uploadFiles" text="ks3://存放在金山ks3上，后面的是bucket；需要安装moqui-KS3模块"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="uploadContent">
+                        <default-field title=" ">
+                            <file accept=".docx,.xlsx,.cdr,.jpg,.jpeg,.gif,.png"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="上传">
+                            <submit/>
+                        </default-field>
+                    </field>
+                    <field-layout>
+                        <field-row><field-ref name="contentRoot"/><field-ref name="uploadContent"/></field-row>
+                        <field-ref name="submitButton"/>
+                    </field-layout>
+                </form-single>
+            </row-col>
+            <row-col lg="12">
+                <form-single name="UploadFileDemo2" transition="uploadMultipleFile">
+                    <field name="contentRoot">
+                        <default-field title="存放地址">
+                            <drop-down>
+                                <option key="runtime://uploadFiles" text="runtime://存放在工程runtime目录下"/>
+                                <option key="component://tutorial/uploadFiles" text="component://tutorial/存放在工程模块下"/>
+                                <option key="file:/home/tutorial/uploadFiles" text="file:存放在服务器上的指定路径下"/>
+                                <option key="dbresource://uploadFiles" text="dbresource://存放在数据库DbResource,DbResourceFile表里"/>
+                                <option key="oss://uploadFiles" text="oss://存放在阿里oss上，后面的是bucket；需要安装moqui-oss模块"/>
+                                <option key="ks3://uploadFiles" text="ks3://存放在金山ks3上，后面的是bucket；需要安装moqui-KS3模块"/>
+                            </drop-down>
+                        </default-field>
+                    </field>
+                    <field name="uploadContent1">
+                        <default-field title="文件1">
+                            <file accept=".docx,.xlsx,.cdr,.jpg,.jpeg,.gif,.png"/>
+                        </default-field>
+                    </field>
+                    <field name="uploadContent2">
+                        <default-field title="文件2">
+                            <file accept=".docx,.xlsx,.cdr,.jpg,.jpeg,.gif,.png"/>
+                        </default-field>
+                    </field>
+                    <field name="submitButton">
+                        <default-field title="上传">
+                            <submit/>
+                        </default-field>
+                    </field>
+                </form-single>
+            </row-col>
+        </container-row>
+
+
+        <form-list name="DisplayDemoFileList" list="fooList" use-widget="aggrid">
+            <entity-find entity-name="moqui.test.Foo" list="fooList"/>
+            <field name="fooId">
+                <default-field>
+                    <hidden/>
+                </default-field>
+            </field>
+            <field name="fooText">
+                <default-field title="文件路径下载">
+                    <link url="downloadDirectly" text="${fooText}" link-parameters="{'fooText':'fooText'}"/>
+                </default-field>
+            </field>
+            <field name="downloadFile">
+                <default-field title="后台查询下载文件">
+                    <link url="downloadTheFile" text="后端查询下载" link-parameters="{'fooId':'fooId'}"/>
+                </default-field>
+            </field>
+            <field name="deleteButton" is-action-column="true">
+                <default-field title="操作">
+                    <link url="deleteFile" text="删除" confirmation="确认删除?" link-parameters="{'fooId':'fooId'}" btn-type="danger"/>
+                </default-field>
+            </field>
+        </form-list>
+
+    </widgets>
+
+</screen>
