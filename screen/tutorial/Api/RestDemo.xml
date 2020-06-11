@@ -1,0 +1,60 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="API演示" menu-image="pin" menu-image-type="icon" default-menu-index="2">
+
+    <transition name="search">
+        <actions>
+            <script><![CDATA[
+                long currentTime = ec.user.nowTimestamp.getTime()
+                Map reqMap = [key:searchText,_:String.valueOf(currentTime)]
+
+                org.moqui.util.RestClient restClient = ec.service.rest().method(org.moqui.util.RestClient.GET).uri().protocol("http").host("sp0.tianyancha.com").path("search").path("suggestV2.json").parameters(reqMap).build()
+
+                restClient.addHeader("Accept","*/*")
+                restClient.addHeader("Accept-Encoding","gzip, deflate, br")
+                restClient.addHeader("Accept-Language","zh-CN,zh;q=0.9,en;q=0.8")
+                restClient.addHeader("Host","sp0.tianyancha.com")
+                restClient.addHeader("Origin","https://www.tianyancha.com")
+                restClient.addHeader("Referer","https://www.tianyancha.com/")
+                restClient.addHeader("Sec-Fetch-Dest","empty")
+                restClient.addHeader("Sec-Fetch-Mode","cors")
+                restClient.addHeader("Sec-Fetch-Site","same-site")
+                restClient.addHeader("User-Agent","Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.61 Safari/537.36")
+                restClient.addHeader("version","TYC-Web")
+
+                org.moqui.util.RestClient.RestResponse restResponse = restClient.call()
+                if (restResponse.statusCode < 200 || restResponse.statusCode >= 300) {
+                    String errMsg = restResponse.text()
+                    ec.message.addError("System message ${systemMessageId} send error response (${restResponse.statusCode}): ${errMsg}")
+                    return
+                }
+                 String responseText = restResponse.text()
+
+                Map responseMap = new groovy.json.JsonSlurper().parseText(responseText)
+
+                List dataList = responseMap.data
+                ]]></script>
+            <iterate list="dataList" entry="dataItem">
+                <log message="dataItem===${dataItem}"/>
+            </iterate>
+        </actions>
+        <default-response url="."/>
+    </transition>
+
+    <widgets>
+       <form-single name="TestRestApi" transition="search">
+           <field name="searchText">
+               <default-field>
+                   <text-line/>
+               </default-field>
+           </field>
+           <field name="searchButton">
+               <default-field title="搜索">
+                   <submit/>
+               </default-field>
+           </field>
+       </form-single>
+
+    </widgets>
+
+</screen>

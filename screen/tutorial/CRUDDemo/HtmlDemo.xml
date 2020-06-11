@@ -1,0 +1,13 @@
+<screen xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/xml-screen-2.1.xsd"
+        default-menu-title="HTML" menu-image="pin" menu-image-type="icon" default-menu-index="9">
+
+    <widgets>
+        <render-mode><text type="html,vuet,covt">
+            <![CDATA[
+            <a href="/billing/index.html" target="_blank">账单</a>
+]]></text>
+        </render-mode>
+    </widgets>
+
+</screen>
